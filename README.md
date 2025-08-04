@@ -11,3 +11,10 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat ignition deploy ./ignition/modules/Lock.ts
 ```
+
+A simple cross-chain bridge contract compatible with Across Protocol.
+
+## Deployments
+
+| Network | Chain ID | Contract Address |
+|---------|----------|------------------|

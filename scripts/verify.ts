@@ -1,19 +1,40 @@
 import * as dotenv from 'dotenv';
-import { run } from 'hardhat';
+import fs from 'fs';
+import { run, network } from 'hardhat';
+import { NETWORK_NAMES, WETH_ADDRESSES } from './constants';
 
 dotenv.config()
 
 async function main() {
-  const contractAddress = process.env.CONTRACT_ADDRESS
-  const constructorArgs = process.env.CONSTRUCTOR_ARGS
-    ? JSON.parse(process.env.CONSTRUCTOR_ARGS)
-    : []
+  const chainId = Number(network.config.chainId);
+  const networkName = NETWORK_NAMES[chainId];
+  const wethAddress = WETH_ADDRESSES[chainId];
 
-  if (!contractAddress) {
-    throw new Error('Please set CONTRACT_ADDRESS in .env file')
+  if (!networkName || !wethAddress) {
+    throw new Error(`Unsupported network with chainId: ${chainId}`);
   }
 
-  console.log('Verifying contract...')
+  // Try to read deployment file first
+  const deploymentFile = `deployments/${networkName}.json`;
+  let contractAddress = process.env.CONTRACT_ADDRESS;
+  let constructorArgs = process.env.CONSTRUCTOR_ARGS
+    ? JSON.parse(process.env.CONSTRUCTOR_ARGS)
+    : [];
+
+  if (fs.existsSync(deploymentFile)) {
+    const deployment = JSON.parse(fs.readFileSync(deploymentFile, 'utf8'));
+    contractAddress = deployment.contractAddress;
+    constructorArgs = [deployment.wethAddress];
+    console.log(`📄 Using deployment file: ${deploymentFile}`);
+  }
+
+  if (!contractAddress) {
+    throw new Error(`Contract address not found. Deploy first or set CONTRACT_ADDRESS in .env file`);
+  }
+
+  console.log(`🔍 Verifying contract on ${networkName}...`);
+  console.log(`Contract: ${contractAddress}`);
+  console.log(`Constructor args: ${JSON.stringify(constructorArgs)}`);
   
   let retries = 3
   while (retries > 0) {

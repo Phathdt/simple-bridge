@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
 interface IWETH {
     function deposit() external payable;
     function withdraw(uint256 amount) external;
@@ -8,14 +13,9 @@ interface IWETH {
     function balanceOf(address account) external view returns (uint256);
 }
 
-interface IERC20 {
-    function transfer(address to, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-}
+contract SimpleBridge is Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
 
-contract SimpleBridge {
-    address public owner;
     address public immutable weth;
     uint32 public numberOfDeposits;
 
@@ -74,15 +74,10 @@ contract SimpleBridge {
         bytes message;
     }
 
-    constructor(address _weth) {
-        owner = msg.sender;
+    constructor(address _weth) Ownable(msg.sender) {
         weth = _weth;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Not owner");
-        _;
-    }
 
     // Main deposit function - Compatible with Across
     function depositV3(
@@ -119,7 +114,7 @@ contract SimpleBridge {
             IWETH(weth).deposit{value: msg.value}();
         } else if (inputToken != address(0)) {
             require(msg.value == 0, "Unexpected ETH");
-            IERC20(inputToken).transferFrom(depositor, address(this), inputAmount);
+            IERC20(inputToken).safeTransferFrom(depositor, address(this), inputAmount);
         } else {
             // Native ETH deposit (inputToken == address(0))
             require(msg.value == inputAmount, "ETH amount mismatch");
@@ -149,7 +144,7 @@ contract SimpleBridge {
     function fillV3Relay(
         V3RelayData calldata relayData,
         uint256 repaymentChainId
-    ) external {
+    ) external nonReentrant {
         // Validations
         bytes32 relayHash = keccak256(abi.encode(relayData));
         require(!filledRelays[relayHash], "Already filled");
@@ -170,9 +165,9 @@ contract SimpleBridge {
         // Transfer tokens to recipient - CORE LOGIC
         if (relayData.outputToken == weth) {
             // Handle WETH/ETH
-            if (_isContract(relayData.recipient)) {
+            if (relayData.recipient.code.length > 0) {
                 // Send WETH to contract
-                IWETH(weth).transfer(relayData.recipient, relayData.outputAmount);
+                IERC20(weth).safeTransfer(relayData.recipient, relayData.outputAmount);
             } else {
                 // Unwrap and send ETH to EOA
                 IWETH(weth).withdraw(relayData.outputAmount);
@@ -183,11 +178,11 @@ contract SimpleBridge {
             payable(relayData.recipient).transfer(relayData.outputAmount);
         } else {
             // Handle other ERC20 tokens
-            IERC20(relayData.outputToken).transfer(relayData.recipient, relayData.outputAmount);
+            IERC20(relayData.outputToken).safeTransfer(relayData.recipient, relayData.outputAmount);
         }
 
         // Handle cross-chain message (if any)
-        if (relayData.message.length > 0 && _isContract(relayData.recipient)) {
+        if (relayData.message.length > 0 && relayData.recipient.code.length > 0) {
             (bool success,) = relayData.recipient.call(relayData.message);
             // Intentionally ignore success to not revert on message call failures
             success; // Suppress unused variable warning
@@ -235,11 +230,11 @@ contract SimpleBridge {
 
     function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
         if (token == address(0)) {
-            payable(owner).transfer(amount);
+            payable(owner()).transfer(amount);
         } else if (token == weth) {
-            IWETH(token).transfer(owner, amount);
+            IERC20(token).safeTransfer(owner(), amount);
         } else {
-            IERC20(token).transfer(owner, amount);
+            IERC20(token).safeTransfer(owner(), amount);
         }
     }
 
@@ -249,12 +244,6 @@ contract SimpleBridge {
         }
     }
 
-    // Helper functions
-    function _isContract(address addr) internal view returns (bool) {
-        uint256 size;
-        assembly { size := extcodesize(addr) }
-        return size > 0;
-    }
 
     // View functions
     function getRelayHash(V3RelayData calldata relayData) external pure returns (bytes32) {
