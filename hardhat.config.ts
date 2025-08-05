@@ -18,22 +18,22 @@ const config: HardhatUserConfig = {
   },
   networks: {
     sepolia: {
-      url: process.env.SEPOLIA_RPC_URL || `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`,
+      url: 'https://ethereum-sepolia-rpc.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111
     },
     baseSepolia: {
-      url: process.env.BASE_SEPOLIA_RPC_URL || 'https://sepolia.base.org',
+      url: 'https://base-sepolia-rpc.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 84532
     },
     arbitrumSepolia: {
-      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+      url: 'https://arbitrum-sepolia-rpc.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 421614
     },
     optimismSepolia: {
-      url: process.env.OPTIMISM_SEPOLIA_RPC_URL || 'https://sepolia.optimism.io',
+      url: 'https://optimism-sepolia-rpc.publicnode.com',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155420
     }

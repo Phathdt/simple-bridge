@@ -147,7 +147,7 @@ export const TOKENS: Token[] = [
 ]
 
 export const PAIRS: Pair[] = [
-  // ETH pairs from Sepolia
+  // Pairs to Base Sepolia (84532)
   {
     id: 'ETH_SEPOLIA_TO_BASE',
     fromChain: 11155111,
@@ -159,28 +159,6 @@ export const PAIRS: Pair[] = [
     enabled: true,
   },
   {
-    id: 'ETH_SEPOLIA_TO_ARBITRUM',
-    fromChain: 11155111,
-    toChain: 421614,
-    fromToken: 'ETH',
-    toToken: 'ETH',
-    minAmount: '0.001',
-    maxAmount: '1.0',
-    enabled: true,
-  },
-  {
-    id: 'ETH_SEPOLIA_TO_OPTIMISM',
-    fromChain: 11155111,
-    toChain: 11155420,
-    fromToken: 'ETH',
-    toToken: 'ETH',
-    minAmount: '0.001',
-    maxAmount: '1.0',
-    enabled: true,
-  },
-
-  // WETH pairs from Sepolia
-  {
     id: 'WETH_SEPOLIA_TO_BASE',
     fromChain: 11155111,
     toChain: 84532,
@@ -190,8 +168,6 @@ export const PAIRS: Pair[] = [
     maxAmount: '1.0',
     enabled: true,
   },
-
-  // USDC pairs from Sepolia
   {
     id: 'USDC_SEPOLIA_TO_BASE',
     fromChain: 11155111,
@@ -202,38 +178,64 @@ export const PAIRS: Pair[] = [
     maxAmount: '1000',
     enabled: true,
   },
-  {
-    id: 'USDC_SEPOLIA_TO_ARBITRUM',
-    fromChain: 11155111,
-    toChain: 421614,
-    fromToken: 'USDC',
-    toToken: 'USDC',
-    minAmount: '1',
-    maxAmount: '1000',
-    enabled: true,
-  },
-  {
-    id: 'USDC_SEPOLIA_TO_OPTIMISM',
-    fromChain: 11155111,
-    toChain: 11155420,
-    fromToken: 'USDC',
-    toToken: 'USDC',
-    minAmount: '1',
-    maxAmount: '1000',
-    enabled: true,
-  },
-  {
-    id: 'USDC_SEPOLIA_TO_BNB',
-    fromChain: 11155111,
-    toChain: 56,
-    fromToken: 'USDC',
-    toToken: 'USDC',
-    minAmount: '1',
-    maxAmount: '1000',
-    enabled: false,
-  },
 
-  // Reverse pairs from Base
+  // // Pairs to Arbitrum Sepolia (421614)
+  // {
+  //   id: 'ETH_SEPOLIA_TO_ARBITRUM',
+  //   fromChain: 11155111,
+  //   toChain: 421614,
+  //   fromToken: 'ETH',
+  //   toToken: 'ETH',
+  //   minAmount: '0.001',
+  //   maxAmount: '1.0',
+  //   enabled: true,
+  // },
+  // {
+  //   id: 'USDC_SEPOLIA_TO_ARBITRUM',
+  //   fromChain: 11155111,
+  //   toChain: 421614,
+  //   fromToken: 'USDC',
+  //   toToken: 'USDC',
+  //   minAmount: '1',
+  //   maxAmount: '1000',
+  //   enabled: true,
+  // },
+
+  // // Pairs to Optimism Sepolia (11155420)
+  // {
+  //   id: 'ETH_SEPOLIA_TO_OPTIMISM',
+  //   fromChain: 11155111,
+  //   toChain: 11155420,
+  //   fromToken: 'ETH',
+  //   toToken: 'ETH',
+  //   minAmount: '0.001',
+  //   maxAmount: '1.0',
+  //   enabled: true,
+  // },
+  // {
+  //   id: 'USDC_SEPOLIA_TO_OPTIMISM',
+  //   fromChain: 11155111,
+  //   toChain: 11155420,
+  //   fromToken: 'USDC',
+  //   toToken: 'USDC',
+  //   minAmount: '1',
+  //   maxAmount: '1000',
+  //   enabled: true,
+  // },
+
+  // // Pairs to BNB Chain (56)
+  // {
+  //   id: 'USDC_SEPOLIA_TO_BNB',
+  //   fromChain: 11155111,
+  //   toChain: 56,
+  //   fromToken: 'USDC',
+  //   toToken: 'USDC',
+  //   minAmount: '1',
+  //   maxAmount: '1000',
+  //   enabled: false,
+  // },
+
+  // // Pairs to Sepolia (11155111)
   {
     id: 'ETH_BASE_TO_SEPOLIA',
     fromChain: 84532,
@@ -244,16 +246,16 @@ export const PAIRS: Pair[] = [
     maxAmount: '1.0',
     enabled: true,
   },
-  {
-    id: 'USDC_BASE_TO_SEPOLIA',
-    fromChain: 84532,
-    toChain: 11155111,
-    fromToken: 'USDC',
-    toToken: 'USDC',
-    minAmount: '1',
-    maxAmount: '1000',
-    enabled: true,
-  },
+  // {
+  //   id: 'USDC_BASE_TO_SEPOLIA',
+  //   fromChain: 84532,
+  //   toChain: 11155111,
+  //   fromToken: 'USDC',
+  //   toToken: 'USDC',
+  //   minAmount: '1',
+  //   maxAmount: '1000',
+  //   enabled: true,
+  // },
 ]
 
 // Helper functions
