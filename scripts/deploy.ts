@@ -19,6 +19,7 @@ async function main() {
 
   const SimpleBridge = await ethers.getContractFactory("SimpleBridge");
   const bridge = await SimpleBridge.deploy(wethAddress);
+
   await bridge.waitForDeployment();
 
   const bridgeAddress = await bridge.getAddress();

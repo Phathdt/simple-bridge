@@ -175,7 +175,17 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
             payable(owner()).transfer(msg.value);
         }
 
-        uint256 depositId = numberOfDeposits++;
+        // Generate depositId as hash of deposit parameters
+        uint256 depositId = uint256(keccak256(abi.encodePacked(
+            inputToken,
+            outputToken,
+            block.chainid, // originChainId
+            destinationChainId,
+            inputAmount,
+            block.timestamp, // timestamp
+            recipient,
+            numberOfDeposits++ // numberOfDepositsCalled
+        )));
 
         // Emit event matching Across Protocol format
         emit FundsDeposited(

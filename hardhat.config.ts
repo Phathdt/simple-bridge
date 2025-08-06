@@ -19,6 +19,7 @@ const config: HardhatUserConfig = {
   networks: {
     sepolia: {
       url: 'https://ethereum-sepolia-rpc.publicnode.com',
+      // url: 'https://eth-sepolia.public.blastapi.io',
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111
     },

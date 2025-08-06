@@ -1,9 +1,9 @@
 {
   "chainId": 84532,
   "network": "base-sepolia",
-  "contractAddress": "0x1a8d5D746b9e46F69b13D387B0E9Da8edc6DeE39",
+  "contractAddress": "0x414a3A689ba7d095309A9859939743c11566Cc81",
   "wethAddress": "0x4200000000000000000000000000000000000006",
-  "deployer": "0xa52dC57EE778F8C80FE8aF8Fb4abbeb3553326b2",
-  "deploymentTx": "0x11497d9b1034aeffff0b89d868c5e6fa30e12fe15ba8d26bca554368e4450581",
-  "timestamp": "2025-08-05T09:47:20.049Z"
+  "deployer": "0x19ce4dE99ce88bc4a759e8dBdEC42724eEcb666f",
+  "deploymentTx": "0xfc317d60d10803caf5f3bb8b279c53dbf95c3b184e44be981efc78251c2df108",
+  "timestamp": "2025-08-05T17:44:29.016Z"
 }

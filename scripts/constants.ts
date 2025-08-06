@@ -246,16 +246,26 @@ export const PAIRS: Pair[] = [
     maxAmount: '1.0',
     enabled: true,
   },
-  // {
-  //   id: 'USDC_BASE_TO_SEPOLIA',
-  //   fromChain: 84532,
-  //   toChain: 11155111,
-  //   fromToken: 'USDC',
-  //   toToken: 'USDC',
-  //   minAmount: '1',
-  //   maxAmount: '1000',
-  //   enabled: true,
-  // },
+  {
+    id: 'WETH_BASE_TO_SEPOLIA',
+    fromChain: 84532,
+    toChain: 11155111,
+    fromToken: 'WETH',
+    toToken: 'WETH',
+    minAmount: '0.001',
+    maxAmount: '1.0',
+    enabled: true,
+  },
+  {
+    id: 'USDC_BASE_TO_SEPOLIA',
+    fromChain: 84532,
+    toChain: 11155111,
+    fromToken: 'USDC',
+    toToken: 'USDC',
+    minAmount: '1',
+    maxAmount: '1000',
+    enabled: true,
+  },
 ]
 
 // Helper functions
