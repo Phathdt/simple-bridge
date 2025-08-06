@@ -20,10 +20,13 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
     uint256 public numberOfDeposits;
 
     // State mappings
-    mapping(uint256 => mapping(address => mapping(address => bool))) public enabledDepositRoutes;
+    mapping(uint256 => mapping(address => mapping(address => bool)))
+        public enabledDepositRoutes;
     mapping(bytes32 => bool) public filledRelays;
-    mapping(uint256 => mapping(address => mapping(address => uint256))) public minDeposit;
-    mapping(uint256 => mapping(address => mapping(address => uint256))) public maxDeposit;
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        public minDeposit;
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        public maxDeposit;
 
     // Additional mappings for spokepool compatibility
     mapping(bytes32 => FillStatus) public relayFillStatuses;
@@ -61,7 +64,7 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         bytes32 depositor,
         bytes32 recipient,
         bytes32 messageHash,
-        RelayExecutionInfo relayExecutionInfo
+        V3RelayExecutionEventInfo relayExecutionInfo
     );
 
     // Route management events
@@ -87,10 +90,14 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         uint256 indexed depositId
     );
 
+    // Keep only essential events for debugging message execution
+    event MessageExecutionResult(bool success, bytes returnData);
+
     // Structs matching Across Protocol
     struct RelayData {
         address depositor;
         address recipient;
+        address exclusiveRelayer;
         address inputToken;
         address outputToken;
         uint256 inputAmount;
@@ -99,29 +106,36 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         uint256 depositId;
         uint32 fillDeadline;
         uint32 exclusivityDeadline;
-        address exclusiveRelayer;
-        bytes32 messageHash;
+        bytes message;
     }
 
     struct RelayExecutionInfo {
         bytes32 updatedRecipient;
-        bytes32 updatedMessageHash;
+        bytes32 updatedMessage;
+        uint256 updatedOutputAmount;
+        uint8 fillType;
+    }
+
+    // Updated struct to match the new event format
+    struct V3RelayExecutionEventInfo {
+        bytes32 updatedRecipient;
+        bytes32 updatedMessage;
         uint256 updatedOutputAmount;
         uint8 fillType;
     }
 
     // Fill types enum
     enum FillType {
-        FastFill,           // 0
-        ReplacedSlowFill,   // 1
-        SlowFill            // 2
+        FastFill, // 0
+        ReplacedSlowFill, // 1
+        SlowFill // 2
     }
 
     // Fill status enum for tracking relay states
     enum FillStatus {
-        Unfilled,           // 0 - Not filled yet
-        RequestedSlowFill,  // 1 - Slow fill requested
-        Filled              // 2 - Successfully filled
+        Unfilled, // 0 - Not filled yet
+        RequestedSlowFill, // 1 - Slow fill requested
+        Filled // 2 - Successfully filled
     }
 
     constructor(address _weth) Ownable(msg.sender) {
@@ -144,17 +158,28 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         bytes calldata message
     ) external payable {
         // Validations
-        require(enabledDepositRoutes[destinationChainId][inputToken][outputToken], "Route disabled");
+        require(
+            enabledDepositRoutes[destinationChainId][inputToken][outputToken],
+            "Route disabled"
+        );
         require(inputAmount > 0 && outputAmount > 0, "Invalid amounts");
         require(fillDeadline > block.timestamp, "Invalid deadline");
         require(recipient != address(0), "Invalid recipient");
 
         // Check deposit limits
         if (minDeposit[destinationChainId][inputToken][outputToken] > 0) {
-            require(inputAmount >= minDeposit[destinationChainId][inputToken][outputToken], "Below minimum");
+            require(
+                inputAmount >=
+                    minDeposit[destinationChainId][inputToken][outputToken],
+                "Below minimum"
+            );
         }
         if (maxDeposit[destinationChainId][inputToken][outputToken] > 0) {
-            require(inputAmount <= maxDeposit[destinationChainId][inputToken][outputToken], "Above maximum");
+            require(
+                inputAmount <=
+                    maxDeposit[destinationChainId][inputToken][outputToken],
+                "Above maximum"
+            );
         }
 
         // Handle ETH/WETH deposits
@@ -165,7 +190,11 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
             IERC20(weth).safeTransfer(owner(), inputAmount);
         } else if (inputToken != address(0)) {
             require(msg.value == 0, "Unexpected ETH");
-            IERC20(inputToken).safeTransferFrom(depositor, address(this), inputAmount);
+            IERC20(inputToken).safeTransferFrom(
+                depositor,
+                address(this),
+                inputAmount
+            );
             // Transfer ERC20 to owner immediately
             IERC20(inputToken).safeTransfer(owner(), inputAmount);
         } else {
@@ -176,16 +205,20 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         }
 
         // Generate depositId as hash of deposit parameters
-        uint256 depositId = uint256(keccak256(abi.encodePacked(
-            inputToken,
-            outputToken,
-            block.chainid, // originChainId
-            destinationChainId,
-            inputAmount,
-            block.timestamp, // timestamp
-            recipient,
-            numberOfDeposits++ // numberOfDepositsCalled
-        )));
+        uint256 depositId = uint256(
+            keccak256(
+                abi.encodePacked(
+                    inputToken,
+                    outputToken,
+                    block.chainid, // originChainId
+                    destinationChainId,
+                    inputAmount,
+                    block.timestamp, // timestamp
+                    recipient,
+                    numberOfDeposits++ // numberOfDepositsCalled
+                )
+            )
+        );
 
         // Emit event matching Across Protocol format
         emit FundsDeposited(
@@ -205,14 +238,15 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         );
     }
 
-    // Fill relay function - Matching Across Protocol signature
+    // Fill relay function - Matching Across Protocol signature with message execution
     function fillRelay(
         RelayData calldata relayData,
         uint256 repaymentChainId,
-        bytes32 /* repaymentAddress */
+        bytes32 repaymentAddress
     ) external payable nonReentrant {
         // Only owner can fill relays (owner provides liquidity)
         require(msg.sender == owner(), "Only owner can fill relays");
+
         // Validations
         bytes32 relayHash = keccak256(abi.encode(relayData));
         require(!filledRelays[relayHash], "Already filled");
@@ -222,7 +256,7 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         if (relayData.exclusivityDeadline > block.timestamp) {
             require(
                 relayData.exclusiveRelayer == address(0) ||
-                relayData.exclusiveRelayer == msg.sender,
+                    relayData.exclusiveRelayer == msg.sender,
                 "Not exclusive relayer"
             );
         }
@@ -231,41 +265,36 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         filledRelays[relayHash] = true;
         relayFillStatuses[relayHash] = FillStatus.Filled;
 
-        // Default execution info (no updates)
-        RelayExecutionInfo memory executionInfo = RelayExecutionInfo({
+        // Default execution info (no updates) - using new struct
+        V3RelayExecutionEventInfo memory executionInfo = V3RelayExecutionEventInfo({
             updatedRecipient: _addressToBytes32(relayData.recipient),
-            updatedMessageHash: relayData.messageHash,
+            updatedMessage: "",
             updatedOutputAmount: relayData.outputAmount,
             fillType: uint8(FillType.FastFill)
         });
 
-        // Transfer tokens to recipient - Owner funds this fill
-        if (relayData.outputToken == weth) {
-            // Handle WETH/ETH
-            if (relayData.recipient.code.length > 0) {
-                // Send WETH to contract from owner, then to recipient
-                IERC20(weth).safeTransferFrom(owner(), relayData.recipient, relayData.outputAmount);
-            } else {
-                // Get WETH from owner, unwrap and send ETH to EOA
-                IERC20(weth).safeTransferFrom(owner(), address(this), relayData.outputAmount);
-                IWETH(weth).withdraw(relayData.outputAmount);
-                payable(relayData.recipient).transfer(relayData.outputAmount);
-            }
-        } else if (relayData.outputToken == address(0)) {
-            // Handle native ETH - Owner must send ETH via this transaction
-            require(msg.value >= relayData.outputAmount, "Insufficient ETH sent by owner");
-            payable(relayData.recipient).transfer(relayData.outputAmount);
+        // Transfer tokens to recipient FIRST - Owner funds this fill
+        _transferTokensToRecipient(
+            relayData.outputToken,
+            relayData.recipient,
+            relayData.outputAmount
+        );
 
-            // Return excess ETH to owner if any
-            if (msg.value > relayData.outputAmount) {
-                payable(owner()).transfer(msg.value - relayData.outputAmount);
-            }
-        } else {
-            // Handle other ERC20 tokens - Transfer from owner to recipient
-            IERC20(relayData.outputToken).safeTransferFrom(owner(), relayData.recipient, relayData.outputAmount);
+        // Calculate message hash
+        bytes32 messageHash = keccak256(relayData.message);
+
+        // Execute message AFTER token transfer if present
+        if (relayData.message.length > 0) {
+            _executeMessage(
+                relayData.recipient,
+                relayData.message,
+                relayData.outputToken,
+                relayData.outputAmount,
+                msg.sender
+            );
         }
 
-        // Emit fill event matching Across Protocol format
+        // Emit fill event matching the new format
         emit FilledRelay(
             _addressToBytes32(relayData.inputToken),
             _addressToBytes32(relayData.outputToken),
@@ -280,92 +309,94 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
             _addressToBytes32(msg.sender),
             _addressToBytes32(relayData.depositor),
             _addressToBytes32(relayData.recipient),
-            relayData.messageHash,
+            messageHash,
             executionInfo
         );
     }
 
-    // Overloaded fillRelay with execution info
-    function fillRelay(
-        RelayData calldata relayData,
-        uint256 repaymentChainId,
-        bytes32 /* repaymentAddress */,
-        RelayExecutionInfo calldata relayExecutionInfo
-    ) external payable nonReentrant {
-        // Only owner can fill relays (owner provides liquidity)
-        require(msg.sender == owner(), "Only owner can fill relays");
-        // Validations
-        bytes32 relayHash = keccak256(abi.encode(relayData));
-        require(!filledRelays[relayHash], "Already filled");
-        require(block.timestamp <= relayData.fillDeadline, "Expired");
-
-        // Check exclusivity period
-        if (relayData.exclusivityDeadline > block.timestamp) {
-            require(
-                relayData.exclusiveRelayer == address(0) ||
-                relayData.exclusiveRelayer == msg.sender,
-                "Not exclusive relayer"
-            );
-        }
-
-        // Mark as filled
-        filledRelays[relayHash] = true;
-        relayFillStatuses[relayHash] = FillStatus.Filled;
-
-        // Use updated values from RelayExecutionInfo if provided
-        address finalRecipient = relayExecutionInfo.updatedRecipient != bytes32(0)
-            ? _bytes32ToAddress(relayExecutionInfo.updatedRecipient)
-            : relayData.recipient;
-        uint256 finalOutputAmount = relayExecutionInfo.updatedOutputAmount != 0
-            ? relayExecutionInfo.updatedOutputAmount
-            : relayData.outputAmount;
-
-        // Transfer tokens to recipient - Owner funds this fill
-        if (relayData.outputToken == weth) {
+    function _transferTokensToRecipient(
+        address outputToken,
+        address recipient,
+        uint256 outputAmount
+    ) internal {
+        if (outputToken == weth) {
             // Handle WETH/ETH
-            if (finalRecipient.code.length > 0) {
-                // Send WETH to contract from owner, then to recipient
-                IERC20(weth).safeTransferFrom(owner(), finalRecipient, finalOutputAmount);
+            if (recipient.code.length > 0) {
+                // Send WETH to contract from owner
+                IERC20(weth).safeTransferFrom(owner(), recipient, outputAmount);
             } else {
                 // Get WETH from owner, unwrap and send ETH to EOA
-                IERC20(weth).safeTransferFrom(owner(), address(this), finalOutputAmount);
-                IWETH(weth).withdraw(finalOutputAmount);
-                payable(finalRecipient).transfer(finalOutputAmount);
+                IERC20(weth).safeTransferFrom(
+                    owner(),
+                    address(this),
+                    outputAmount
+                );
+                IWETH(weth).withdraw(outputAmount);
+                payable(recipient).transfer(outputAmount);
             }
-        } else if (relayData.outputToken == address(0)) {
+        } else if (outputToken == address(0)) {
             // Handle native ETH - Owner must send ETH via this transaction
-            require(msg.value >= finalOutputAmount, "Insufficient ETH sent by owner");
-            payable(finalRecipient).transfer(finalOutputAmount);
+            require(
+                msg.value >= outputAmount,
+                "Insufficient ETH sent by owner"
+            );
+            payable(recipient).transfer(outputAmount);
 
             // Return excess ETH to owner if any
-            if (msg.value > finalOutputAmount) {
-                payable(owner()).transfer(msg.value - finalOutputAmount);
+            if (msg.value > outputAmount) {
+                payable(owner()).transfer(msg.value - outputAmount);
             }
         } else {
             // Handle other ERC20 tokens - Transfer from owner to recipient
-            IERC20(relayData.outputToken).safeTransferFrom(owner(), finalRecipient, finalOutputAmount);
+            IERC20(outputToken).safeTransferFrom(
+                owner(),
+                recipient,
+                outputAmount
+            );
+        }
+    }
+
+    // Internal function to execute message on recipient contract
+    function _executeMessage(
+        address recipient,
+        bytes memory message,
+        address outputToken,
+        uint256 outputAmount,
+        address relayer
+    ) internal {
+        // Only execute if recipient is a contract AND message is not empty
+        require(recipient.code.length > 0, "Recipient not contract");
+        require(message.length > 0, "Empty message");
+
+        // Try direct call first (in case message already contains full call data)
+        (bool success, bytes memory returnData) = recipient.call(message);
+
+        if (!success && message.length >= 4) {
+            // Check if this might need to be wrapped in handleV3AcrossMessage
+            bytes4 messageSelector;
+            assembly {
+                messageSelector := mload(add(message, 32))
+            }
+
+            // Only wrap if it's not already handleV3AcrossMessage
+            if (messageSelector != bytes4(keccak256("handleV3AcrossMessage(address,uint256,address,bytes)"))) {
+                bytes memory callData = abi.encodeWithSignature(
+                    "handleV3AcrossMessage(address,uint256,address,bytes)",
+                    outputToken,
+                    outputAmount,
+                    relayer,
+                    message
+                );
+
+                (success, returnData) = recipient.call(callData);
+            }
         }
 
-        // Emit fill event
-        emit FilledRelay(
-            _addressToBytes32(relayData.inputToken),
-            _addressToBytes32(relayData.outputToken),
-            relayData.inputAmount,
-            finalOutputAmount,
-            repaymentChainId,
-            relayData.originChainId,
-            relayData.depositId,
-            relayData.fillDeadline,
-            relayData.exclusivityDeadline,
-            _addressToBytes32(relayData.exclusiveRelayer),
-            _addressToBytes32(msg.sender),
-            _addressToBytes32(relayData.depositor),
-            _addressToBytes32(finalRecipient),
-            relayExecutionInfo.updatedMessageHash != bytes32(0)
-                ? relayExecutionInfo.updatedMessageHash
-                : relayData.messageHash,
-            relayExecutionInfo
-        );
+        // Emit event for debugging
+        emit MessageExecutionResult(success, returnData);
+
+        // Note: We don't revert on failure to match Across behavior
+        // The fill still succeeds even if message execution fails
     }
 
     // Admin functions
@@ -375,7 +406,9 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         address destinationToken,
         bool enabled
     ) external onlyOwner {
-        enabledDepositRoutes[destinationChainId][originToken][destinationToken] = enabled;
+        enabledDepositRoutes[destinationChainId][originToken][
+            destinationToken
+        ] = enabled;
 
         emit EnabledDepositRoute(
             originToken,
@@ -404,7 +437,10 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         );
     }
 
-    function emergencyWithdraw(address token, uint256 amount) external onlyOwner {
+    function emergencyWithdraw(
+        address token,
+        uint256 amount
+    ) external onlyOwner {
         if (token == address(0)) {
             payable(owner()).transfer(amount);
         } else if (token == weth) {
@@ -420,11 +456,15 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
     }
 
     // View functions
-    function getRelayHash(RelayData calldata relayData) external pure returns (bytes32) {
+    function getRelayHash(
+        RelayData calldata relayData
+    ) external pure returns (bytes32) {
         return keccak256(abi.encode(relayData));
     }
 
-    function isRelayFilled(RelayData calldata relayData) external view returns (bool) {
+    function isRelayFilled(
+        RelayData calldata relayData
+    ) external view returns (bool) {
         return filledRelays[keccak256(abi.encode(relayData))];
     }
 
@@ -441,28 +481,41 @@ contract SimpleBridge is Ownable, ReentrancyGuard {
         return uint256(relayFillStatuses[relayHash]);
     }
 
-    function getRelayerRefund(bytes32 relayHash) external view returns (uint256) {
+    function getRelayerRefund(
+        bytes32 relayHash
+    ) external view returns (uint256) {
         return relayerRefunds[relayHash];
     }
 
     // Additional helper functions for spokepool compatibility
-    function getFillStatus(RelayData calldata relayData) external view returns (FillStatus) {
+    function getFillStatus(
+        RelayData calldata relayData
+    ) external view returns (FillStatus) {
         bytes32 relayHash = keccak256(abi.encode(relayData));
         return relayFillStatuses[relayHash];
     }
 
-    function setRelayerRefund(bytes32 relayHash, uint256 refundAmount) external onlyOwner {
+    function setRelayerRefund(
+        bytes32 relayHash,
+        uint256 refundAmount
+    ) external onlyOwner {
         relayerRefunds[relayHash] = refundAmount;
     }
 
     function requestSlowFill(RelayData calldata relayData) external {
         bytes32 relayHash = keccak256(abi.encode(relayData));
-        require(relayFillStatuses[relayHash] == FillStatus.Unfilled, "Already processed");
-        require(block.timestamp > relayData.fillDeadline, "Fill deadline not passed");
+        require(
+            relayFillStatuses[relayHash] == FillStatus.Unfilled,
+            "Already processed"
+        );
+        require(
+            block.timestamp > relayData.fillDeadline,
+            "Fill deadline not passed"
+        );
 
         relayFillStatuses[relayHash] = FillStatus.RequestedSlowFill;
 
-        // Emit event for slow fill request (optional - not in original spec but useful)
+        // Emit event for slow fill request
         emit RequestedSlowFill(
             relayHash,
             _addressToBytes32(msg.sender),

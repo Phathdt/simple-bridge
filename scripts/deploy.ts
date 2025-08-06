@@ -23,6 +23,9 @@ async function main() {
   await bridge.waitForDeployment();
 
   const bridgeAddress = await bridge.getAddress();
+  const deploymentTx = bridge.deploymentTransaction()?.hash;
+  const deploymentBlock = deploymentTx ? (await ethers.provider.getTransactionReceipt(deploymentTx))?.blockNumber : undefined;
+
   console.log(`✅ SimpleBridge deployed: ${bridgeAddress}`);
 
   const deploymentData = {
@@ -31,7 +34,8 @@ async function main() {
     contractAddress: bridgeAddress,
     wethAddress: wethAddress,
     deployer: deployer.address,
-    deploymentTx: bridge.deploymentTransaction()?.hash,
+    deploymentTx: deploymentTx,
+    deploymentBlock: deploymentBlock,
     timestamp: new Date().toISOString()
   };
 

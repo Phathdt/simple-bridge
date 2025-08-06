@@ -20,6 +20,7 @@ export interface DeploymentData {
   usdcAddress: string
   deployer: string
   deploymentTx?: string
+  deploymentBlock?: number
   timestamp: string
   supportedTokens: {
     ETH: string
