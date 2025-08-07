@@ -71,7 +71,7 @@ function updateReadmeTable() {
     })
     .join('\n');
 
-  const newTable = `${tableHeader}\n${tableRows}\n`;
+  const newTable = `${tableHeader}\n${tableRows}`;
 
   const updatedReadme = beforeTable + newTable + afterTable;
 
