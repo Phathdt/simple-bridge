@@ -18,3 +18,5 @@ A simple cross-chain bridge contract compatible with Across Protocol.
 
 | Network | Chain ID | Contract Address |
 |---------|----------|------------------|
+| base-sepolia | 84532 | [0xC896339ba282f1ac3EDDAa0dE91440Ee444CdaC3](https://sepolia.basescan.org/address/0xC896339ba282f1ac3EDDAa0dE91440Ee444CdaC3) |
+| sepolia | 11155111 | [0x203555F3637bC17ad1d067924893f5Bb40f3C95B](https://sepolia.etherscan.io/address/0x203555F3637bC17ad1d067924893f5Bb40f3C95B) |

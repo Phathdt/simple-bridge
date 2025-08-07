@@ -6,10 +6,35 @@ export const WETH_ADDRESSES: { [key: number]: string } = {
 }
 
 export const NETWORK_NAMES: { [key: number]: string } = {
+  // Testnets
   11155111: 'sepolia',
   84532: 'base-sepolia',
   421614: 'arbitrum-sepolia',
   11155420: 'optimism-sepolia',
+
+  // Mainnets
+  1: 'ethereum',
+  8453: 'base',
+  42161: 'arbitrum',
+  10: 'optimism',
+  137: 'polygon',
+  56: 'bsc',
+}
+
+export const SCANNER_URLS: { [key: number]: string } = {
+  // Testnets
+  11155111: 'https://sepolia.etherscan.io',
+  84532: 'https://sepolia.basescan.org',
+  421614: 'https://sepolia.arbiscan.io',
+  11155420: 'https://sepolia-optimism.etherscan.io',
+
+  // Mainnets
+  1: 'https://etherscan.io',
+  8453: 'https://basescan.org',
+  42161: 'https://arbiscan.io',
+  10: 'https://optimistic.etherscan.io',
+  137: 'https://polygonscan.com',
+  56: 'https://bscscan.com',
 }
 
 export interface DeploymentData {

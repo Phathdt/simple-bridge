@@ -13,6 +13,7 @@
     "verify:sepolia": "hardhat run scripts/verify.ts --network sepolia",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "update-readme": "hardhat run scripts/update-readme.ts",
     "typechain": "hardhat typechain",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix"

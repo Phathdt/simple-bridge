@@ -52,6 +52,14 @@ async function main() {
   console.log(`WETH: ${wethAddress}`);
   console.log(`TX: ${bridge.deploymentTransaction()?.hash}`);
   console.log(`File: ${filename}`);
+
+  console.log("\n🔄 Updating README.md...");
+  try {
+    const { execSync } = require('child_process');
+    execSync('npx hardhat run scripts/update-readme.ts', { stdio: 'inherit' });
+  } catch (error) {
+    console.log('⚠️  Failed to update README.md:', error);
+  }
 }
 
 main()
